@@ -8,55 +8,47 @@ DLL_EXPORT size_t zstd_filter(unsigned int flags, size_t cd_nelmts,
 	const unsigned int cd_values[], size_t nbytes,
 	size_t *buf_size, void **buf)
 {
+	size_t new_size = 0;
 	void *outbuf = NULL;    /* Pointer to new output buffer */
-	void *inbuf = NULL;    /* Pointer to input buffer */
-	inbuf = *buf;
-
-	size_t ret_value;
-	size_t origSize = nbytes;     /* Number of bytes for output (compressed) buffer */
 
 	if (flags & H5Z_FLAG_REVERSE)
 	{
-		size_t decompSize = ZSTD_getDecompressedSize(*buf, origSize);
-		if (NULL == (outbuf = malloc(decompSize)))
+		new_size = ZSTD_getDecompressedSize(*buf, nbytes);
+		outbuf = malloc(new_size);
+		if (!outbuf)
 			goto error;
 
-		decompSize = ZSTD_decompress(outbuf, decompSize, inbuf, origSize);
-
-		free(*buf);
-		*buf = outbuf;
-		outbuf = NULL;
-		ret_value = (size_t)decompSize;
+		new_size = ZSTD_decompress(outbuf, new_size, *buf, nbytes);
+		if (ZSTD_isError(new_size))
+			goto error;
 	}
 	else
 	{
-		int aggression;
-		if (cd_nelmts > 0)
-			aggression = (int)cd_values[0];
-		else
-			aggression = ZSTD_CLEVEL_DEFAULT;
-		if (aggression < 1 /*ZSTD_minCLevel()*/)
-			aggression = 1 /*ZSTD_minCLevel()*/;
-		else if (aggression > ZSTD_maxCLevel())
-			aggression = ZSTD_maxCLevel();
+		int comp_level = (cd_nelmts > 0)? (int)cd_values[0] : ZSTD_CLEVEL_DEFAULT;
 
-		size_t compSize = ZSTD_compressBound(origSize);
-		if (NULL == (outbuf = malloc(compSize)))
+		if (comp_level < 1 /*ZSTD_minCLevel()*/)
+			comp_level = 1 /*ZSTD_minCLevel()*/;
+		else if (comp_level > ZSTD_maxCLevel())
+			comp_level = ZSTD_maxCLevel();
+
+		new_size = ZSTD_compressBound(nbytes);
+		outbuf = malloc(new_size);
+		if (!outbuf)
 			goto error;
 
-		compSize = ZSTD_compress(outbuf, compSize, inbuf, origSize, aggression);
-
-		free(*buf);
-		*buf = outbuf;
-		*buf_size = compSize;
-		outbuf = NULL;
-		ret_value = compSize;
+		new_size = ZSTD_compress(outbuf, new_size, *buf, nbytes, comp_level);
+		if (ZSTD_isError(new_size))
+			goto error;
 	}
-	if (outbuf != NULL)
-		free(outbuf);
-	return ret_value;
+
+	free(*buf);
+	*buf = outbuf;
+	*buf_size = new_size;
+	return new_size;
 
 error:
+	if (outbuf)
+		free(outbuf);
 	return 0;
 }
 
