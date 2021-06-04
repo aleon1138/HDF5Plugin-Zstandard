@@ -1,4 +1,4 @@
-#include "hdf5.h"
+#include <hdf5.h>
 
 #if defined(_MSC_VER)
     #define DLL_EXPORT __declspec(dllexport)

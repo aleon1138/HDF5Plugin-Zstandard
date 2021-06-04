@@ -1,6 +1,6 @@
 #include <stdlib.h>
+#include <zstd.h>
 #include "zstd_h5plugin.h"
-#include "zstd.h"
 
 #define ZSTD_FILTER 32015
 
