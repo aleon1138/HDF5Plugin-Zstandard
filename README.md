@@ -25,6 +25,14 @@ filter plugin for HDF5 with the assigned filter code 32015.
 
 ---
 
+## Prerequisites
+
+You might need to install the following development libraries:
+
+```bash
+sudo apt install libzstd-dev libhdf5-dev
+```
+
 ## Build
 
 This plugin can be built and installed as a shared library to
